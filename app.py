@@ -4,11 +4,11 @@ import matplotlib.pyplot as plt
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-st.set_page_config(page_title="Resume Screening System",layout="centered")
+st.set_page_config(page_title="Resume Analyzer",layout="wide")
 
-st.title("Resume Screening System")
+st.title("📄 AI Resume Screening System")
 
-# ---------- PDF TEXT EXTRACTION ----------
+# -------- PDF TEXT --------
 def extract_text(file):
     text=""
     pdf_reader=PyPDF2.PdfReader(file)
@@ -17,24 +17,29 @@ def extract_text(file):
             text+=page.extract_text()
     return text
 
-# ---------- KEYWORD EXTRACTION ----------
+# -------- KEYWORDS --------
 def get_keywords(text):
-    words=text.lower().split()
-    return set(words)
+    return set(text.lower().split())
 
-# ---------- INPUT ----------
-job_desc=st.text_area("📄 Enter Job Description")
+# -------- INPUT SECTION --------
+col1,col2=st.columns(2)
 
-uploaded_file=st.file_uploader("📎 Upload Resume (PDF)",type=["pdf"])
+with col1:
+    job_desc=st.text_area("📌 Job Description",height=200)
 
-# ---------- PROCESS ----------
-if st.button("Analyze Resume"):
+with col2:
+    uploaded_file=st.file_uploader("📎 Upload Resume (PDF)",type=["pdf"])
+
+st.markdown("---")
+
+# -------- BUTTON --------
+if st.button("🔍 Analyze Resume"):
 
     if job_desc.strip()=="":
-        st.warning("Please enter job description")
+        st.warning("Enter job description")
 
     elif uploaded_file is None:
-        st.warning("Please upload a resume")
+        st.warning("Upload resume")
 
     else:
         resume_text=extract_text(uploaded_file)
@@ -45,26 +50,30 @@ if st.button("Analyze Resume"):
         vectors=tfidf.fit_transform(documents)
 
         score=cosine_similarity(vectors[0:1],vectors[1:2])[0][0]
+        percent=score*100
 
-        # ---------- DISPLAY SCORE ----------
+        # -------- SCORE DISPLAY --------
         st.subheader("📊 Match Score")
-        st.write(f"### {score*100:.2f}%")
+        st.progress(int(percent))
+        st.write(f"### {percent:.2f}%")
 
-        # ---------- BAR CHART ----------
+        # -------- BAR CHART --------
         fig,ax=plt.subplots()
-        ax.bar(["Match Score"],[score*100])
-        ax.set_ylim(0,100)
+        ax.barh(["Match"],[percent])
+        ax.set_xlim(0,100)
         st.pyplot(fig)
 
-        # ---------- RESULT ----------
+        # -------- RESULT --------
         if score>0.7:
-            st.success("Strong Match ✅")
+            st.success("🔥 Strong Match")
         elif score>0.4:
-            st.warning("Average Match ⚠️")
+            st.warning("⚠️ Moderate Match")
         else:
-            st.error("Low Match ❌")
+            st.error("❌ Low Match")
 
-        # ---------- KEYWORD MATCHING ----------
+        st.markdown("---")
+
+        # -------- KEYWORD MATCH --------
         st.subheader("🔍 Matching Keywords")
 
         job_keywords=get_keywords(job_desc)
@@ -75,4 +84,13 @@ if st.button("Analyze Resume"):
         if common:
             st.write(", ".join(list(common)[:20]))
         else:
-            st.write("No significant keyword match found")
+            st.write("No strong keyword match")
+
+        st.markdown("---")
+
+        # -------- EXTRA INSIGHT --------
+        st.subheader("📌 Analysis")
+
+        st.write(f"- Total Keywords in Job Description: {len(job_keywords)}")
+        st.write(f"- Total Keywords in Resume: {len(resume_keywords)}")
+        st.write(f"- Matching Keywords: {len(common)}")
